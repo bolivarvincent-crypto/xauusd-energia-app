@@ -1,17 +1,21 @@
-from fastapi import FastAPI
+from flask import Flask, jsonify
 import requests
 
-app = FastAPI()
+app = Flask(__name__)
 
-@app.get("/status")
-def status():
-    return {"status": "Backend OK"}
+@app.route('/')
+def home():
+    return jsonify({"status": "Backend OK"})
 
-@app.get("/price")
-def price():
+@app.route('/precio')
+def precio():
     try:
-        r = requests.get("https://api.exchangerate.host/latest?base=XAU&symbols=USD")
-        data = r.json()
-        return {"gold_price_usd": data["rates"]["USD"]}
-    except:
-        return {"gold_price_usd": None}
+        url = "https://data-asg.goldprice.org/dbXRates/USD"
+        res = requests.get(url, timeout=10).json()
+        precio = res["items"][0]["xauPrice"]
+        return jsonify({"gold_price_usd": precio})
+    except Exception as e:
+        return jsonify({"error": str(e), "gold_price_usd": None})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)
