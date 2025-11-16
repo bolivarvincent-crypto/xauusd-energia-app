@@ -1,36 +1,31 @@
-import time
+import streamlit as st
 import requests
-from fastapi import FastAPI
+import pandas as pd
+import time
 
-app = FastAPI()
+API_URL = "https://xauusd-backend.onrender.com/price"   # <-- AQUÍ VA TU ENLACE CORRECTO
 
-API_URL = "https://api.exchangerate.host/latest?base=XAU&symbols=USD"
+st.title("Precio XAU/USD en tiempo real")
+st.subheader("Actualización cada 10 segundos")
 
-data_cache = {"price": None, "timestamp": None}
+placeholder = st.empty()
+data = []
 
-def get_gold_price():
+while True:
     try:
-        response = requests.get(API_URL, timeout=5)
-        response.raise_for_status()
-        json_data = response.json()
+        response = requests.get(API_URL)
+        price = response.json()["price"]
 
-        price = json_data["rates"]["USD"]
-        return price
+        timestamp = pd.Timestamp.now()
+        data.append({"time": timestamp, "price": price})
+
+        df = pd.DataFrame(data)
+
+        with placeholder.container():
+            st.line_chart(df.set_index("time"))
+
+        time.sleep(10)
+
     except Exception as e:
-        print("Error:", e)
-        return None
-
-@app.get("/price")
-def price_endpoint():
-    # If cache older than 10s → refresh
-    now = time.time()
-    if (
-        data_cache["timestamp"] is None
-        or now - data_cache["timestamp"] > 10
-    ):
-        new_price = get_gold_price()
-        if new_price:
-            data_cache["price"] = new_price
-            data_cache["timestamp"] = now
-
-    return {"gold_price_usd": data_cache["price"]}
+        st.error(f"Error: {e}")
+        time.sleep(5)
