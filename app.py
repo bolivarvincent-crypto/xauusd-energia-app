@@ -1,37 +1,17 @@
-import time
-import streamlit as st
+from fastapi import FastAPI
 import requests
-import pandas as pd
 
-# URL del backend (FastAPI)
-API_URL = "https://xauusd-backend.onrender.com/price"
+app = FastAPI()
 
-st.title("Precio XAU/USD en tiempo real")
-st.subheader("Actualización cada 10 segundos")
+@app.get("/status")
+def status():
+    return {"status": "Backend OK"}
 
-placeholder = st.empty()
-historico = []
-
-def obtener_precio():
+@app.get("/price")
+def price():
     try:
-        r = requests.get(API_URL, timeout=5)
-        r.raise_for_status()
-        precio = r.json().get("gold_price_usd")
-        return precio
-    except Exception as e:
-        st.error(f"Error obteniendo precio: {e}")
-        return None
- 
-while True:
-    precio = obtener_precio()
-    if precio:
-        timestamp = pd.Timestamp.now()
-
-        historico.append({"time": timestamp, "price": precio})
-        df = pd.DataFrame(historico)
-
-        with placeholder.container():
-            st.metric("Precio actual", f"{precio} USD")
-            st.line_chart(df.set_index("time"))
-
-    time.sleep(10)
+        r = requests.get("https://api.exchangerate.host/latest?base=XAU&symbols=USD")
+        data = r.json()
+        return {"gold_price_usd": data["rates"]["USD"]}
+    except:
+        return {"gold_price_usd": None}
