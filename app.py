@@ -6,8 +6,8 @@ app = FastAPI()
 
 data_cache = {"price": None, "timestamp": None}
 
-# Ticker de XAUUSD en Yahoo Finance
-TICKER = "XAUUSD=X"
+# Ticker que SI funciona en cualquier servidor
+TICKER = "GC=F"   # Oro futuro del CME
 
 def get_gold_price():
     try:
@@ -20,7 +20,8 @@ def get_gold_price():
         price = float(data["Close"].iloc[-1])
         return price
 
-    except:
+    except Exception as e:
+        print("Error:", e)
         return None
 
 
