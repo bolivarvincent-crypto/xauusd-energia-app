@@ -21,7 +21,7 @@ def obtener_precio():
     except Exception as e:
         st.error(f"Error obteniendo precio: {e}")
         return None
-
+ 
 while True:
     precio = obtener_precio()
     if precio:
