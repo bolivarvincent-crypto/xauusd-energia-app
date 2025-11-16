@@ -1,25 +1,46 @@
-from flask import Flask, jsonify
+import streamlit as st
 import requests
+import pandas as pd
+import time
 
-app = Flask(__name__)
+st.set_page_config(page_title="XAU/USD en tiempo real", layout="wide")
 
-@app.route('/')
-def home():
-    return jsonify({"status": "Backend OK"})
+st.title("Precio del Oro (XAU/USD) en Tiempo Real")
+st.subheader("Actualización automática cada 10 segundos")
 
-@app.route('/precio')
-def precio():
+backend_url = "https://xauusd-backend.onrender.com/precio"
+
+placeholder_price = st.empty()
+placeholder_chart = st.empty()
+
+historical = []
+
+def obtener_precio():
     try:
-        url = "https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD"
-        res = requests.get(url, timeout=10).json()
+        res = requests.get(backend_url, timeout=5).json()
 
-        # Tomamos el primer broker y su primer perfil de precios
-        precio = res[0]["spreadProfilePrices"][0]["bid"]
-
-        return jsonify({"gold_price_usd": precio})
+        if "gold_price_usd" in res and res["gold_price_usd"]:
+            return float(res["gold_price_usd"])
+        return None
 
     except Exception as e:
-        return jsonify({"error": str(e), "gold_price_usd": None})
+        st.error(f"Error al obtener precio: {e}")
+        return None
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+
+# Loop en Streamlit
+while True:
+    price = obtener_precio()
+
+    if price:
+        timestamp = pd.Timestamp.now()
+        historical.append({"time": timestamp, "price": price})
+        df = pd.DataFrame(historical)
+
+        # Mostrar precio
+        placeholder_price.metric("Precio actual", f"{price:.2f} USD")
+
+        # Mostrar gráfica
+        placeholder_chart.line_chart(df.set_index("time"))
+
+    time.sleep(10)
