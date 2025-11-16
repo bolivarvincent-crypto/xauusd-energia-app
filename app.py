@@ -1,47 +1,37 @@
-from fastapi import FastAPI
 import time
-import yfinance as yf
+import streamlit as st
+import requests
+import pandas as pd
 
-app = FastAPI()
+# URL del backend (FastAPI)
+API_URL = "https://xauusd-backend.onrender.com/price"
 
-data_cache = {"price": None, "timestamp": None}
+st.title("Precio XAU/USD en tiempo real")
+st.subheader("Actualización cada 10 segundos")
 
-# Ticker que SI funciona en cualquier servidor
-TICKER = "GC=F"   # Oro futuro del CME
+placeholder = st.empty()
+historico = []
 
-def get_gold_price():
+def obtener_precio():
     try:
-        ticker = yf.Ticker(TICKER)
-        data = ticker.history(period="1d", interval="1m")
-
-        if data.empty:
-            return None
-
-        price = float(data["Close"].iloc[-1])
-        return price
-
+        r = requests.get(API_URL, timeout=5)
+        r.raise_for_status()
+        precio = r.json().get("gold_price_usd")
+        return precio
     except Exception as e:
-        print("Error:", e)
+        st.error(f"Error obteniendo precio: {e}")
         return None
 
+while True:
+    precio = obtener_precio()
+    if precio:
+        timestamp = pd.Timestamp.now()
 
-@app.get("/price")
-def price_endpoint():
-    now = time.time()
+        historico.append({"time": timestamp, "price": precio})
+        df = pd.DataFrame(historico)
 
-    # actualizar cada 10s
-    if (
-        data_cache["timestamp"] is None
-        or now - data_cache["timestamp"] > 10
-    ):
-        new_price = get_gold_price()
-        if new_price:
-            data_cache["price"] = new_price
-            data_cache["timestamp"] = now
+        with placeholder.container():
+            st.metric("Precio actual", f"{precio} USD")
+            st.line_chart(df.set_index("time"))
 
-    return {"gold_price_usd": data_cache["price"]}
-
-
-@app.get("/")
-def root():
-    return {"status": "Backend OK"}
+    time.sleep(10)
