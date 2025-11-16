@@ -1,24 +1,25 @@
 from fastapi import FastAPI
-import requests
 import time
+import yfinance as yf
 
 app = FastAPI()
 
-# API de oro (gratis)
-API_URL = "https://api.metals.live/v1/spot"
-
 data_cache = {"price": None, "timestamp": None}
 
+# Ticker de XAUUSD en Yahoo Finance
+TICKER = "XAUUSD=X"
 
 def get_gold_price():
     try:
-        response = requests.get(API_URL, timeout=5)
-        response.raise_for_status()
-        json_data = response.json()
+        ticker = yf.Ticker(TICKER)
+        data = ticker.history(period="1d", interval="1m")
 
-        # metals.live devuelve una lista [[precio]]
-        price = json_data[0][0]
+        if data.empty:
+            return None
+
+        price = float(data["Close"].iloc[-1])
         return price
+
     except:
         return None
 
@@ -27,7 +28,7 @@ def get_gold_price():
 def price_endpoint():
     now = time.time()
 
-    # refrescar cada 10 segundos
+    # actualizar cada 10s
     if (
         data_cache["timestamp"] is None
         or now - data_cache["timestamp"] > 10
